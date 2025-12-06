@@ -3,6 +3,7 @@ from benchmarks.benchmark_functions import rosenbrock, schwefel
 from benchmarks.stop_conditions import stop_brak_poprawy, stop_znane_optimum
 from multiprocessing import Pool, cpu_count
 import time
+import pickle
 
 def eval_block(block, objective):
     return [objective(x) for x in block]
@@ -122,7 +123,7 @@ def uruchom_pso(
     eps_no_improve=1e-6,
     random_state=None,
 ):
-
+    positions_list = []
     (
         positions,
         velocities,
@@ -134,6 +135,7 @@ def uruchom_pso(
     ) = inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state)
 
     for it in range(max_iters):
+        positions_list.append(positions)
         (
             positions,
             velocities,
@@ -166,7 +168,10 @@ def uruchom_pso(
                 break
 
     liczba_iteracji = len(best_history) - 1
-    return gbest_position, gbest_value, liczba_iteracji
+    metadata = {"Iteracje": liczba_iteracji, "Liczba punktów": swarm_size, 
+                "Funkcja": objective.__name__, "Ograniczenia" : bounds}
+    
+    return gbest_position, gbest_value, liczba_iteracji, metadata, positions_list
 
 def eksperymenty():
     funkcje = [
@@ -174,7 +179,7 @@ def eksperymenty():
         ("Rosenbrock", rosenbrock, (-10.0, 10.0))
     ]
 
-    ns = [10, 50, 100]
+    ns = [2]
 
     for nazwa, objective, bounds in funkcje:
         print(f"\n=== Zadanie: {nazwa} ===")
@@ -193,7 +198,7 @@ def eksperymenty():
             # ---------------------------------------------
             with Pool(processes=cpu_count()) as pool:
                 start = time.time()
-                best_x, best_f, iters = uruchom_pso(
+                best_x, best_f, iters, metadata, positions = uruchom_pso(
                     objective=objective,
                     n_dim=n,
                     bounds=bounds,
@@ -211,12 +216,21 @@ def eksperymenty():
             print("[Kryterium 1] najlepsze f(x):", best_f)
             print("[Kryterium 1] czas:", end - start)
 
+            file = open(f'parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
+            pickle.dump(metadata, file)
+            file.close()
+
+            file = open(f'parallel_{nazwa}_kryt_1_points.txt', 'wb')
+            for position in positions:
+                np.save(file, position)
+            file.close()
+
             # ---------------------------------------------
             # Kryterium 2 — brak poprawy
             # ---------------------------------------------
             with Pool(processes=cpu_count()) as pool:
                 start = time.time()
-                best_x2, best_f2, iters2 = uruchom_pso(
+                best_x2, best_f2, iters2, metadata, positions = uruchom_pso(
                     objective=objective,
                     n_dim=n,
                     bounds=bounds,
@@ -233,6 +247,15 @@ def eksperymenty():
             print("[Kryterium 2] iteracje:", iters2)
             print("[Kryterium 2] najlepsze f(x):", best_f2)
             print("[Kryterium 2] czas:", end - start)
+
+            file = open(f'parallel_{nazwa}_kryt_2_metadata.txt', 'wb')
+            pickle.dump(metadata, file)
+            file.close()
+
+            file = open(f'parallel_{nazwa}_kryt_2_points.txt', 'wb')
+            for position in positions:
+                np.save(file, position)
+            file.close()
 
 
 if __name__ == "__main__":

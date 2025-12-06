@@ -87,3 +87,7 @@ cython_debug/
 
 # IDEs
 .idea/
+
+# Output files
+*.txt
+*.gif
