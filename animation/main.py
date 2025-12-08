@@ -9,8 +9,8 @@ TYPE = "sequential"
 # TYPE = "parallel"
 FUNCTION_NAME = "Schwefel"
 # FUNCTION_NAME = "Rosenbrock"
-CRITERIUM = "kryt_1"
-# CRITERIUM = "kryt_2"
+# CRITERIUM = "kryt_1"
+CRITERIUM = "kryt_2"
 #########
 
 ######### USTAW WIELKOŚĆ PUNKTÓW I WEKTORÓW
@@ -19,8 +19,8 @@ VECTOR_SCALE = 10000
 #########
 
 
-METADATA_PATH = f"{TYPE}_{FUNCTION_NAME}_{CRITERIUM}_metadata.txt"
-POINTS_PATH = f"{TYPE}_{FUNCTION_NAME}_{CRITERIUM}_points.txt"
+METADATA_PATH = f"data/{TYPE}_{FUNCTION_NAME}_{CRITERIUM}_metadata.txt"
+POINTS_PATH = f"data/{TYPE}_{FUNCTION_NAME}_{CRITERIUM}_points.txt"
 
 file = open(METADATA_PATH, 'rb')
 metadata = pickle.load(file)
@@ -75,5 +75,5 @@ def update(frame):
   return image
 
 animation = animation.FuncAnimation(fig, update, frames=ITERATIONS-1, interval=100, repeat = False)
-animation.save(f"{TYPE}_{FUNCTION_NAME}_{CRITERIUM}_animation.gif")
+animation.save(f"output/{TYPE}_{FUNCTION_NAME}_{CRITERIUM}_animation.gif")
 plt.show()
