@@ -2,44 +2,34 @@ import numpy as np
 from mpi4py import MPI
 from benchmarks.stop_conditions import stop_brak_poprawy, stop_znane_optimum
 
+# Dzieli całkowitą liczbę elementów na podzbiory dla każdego procesu, jest to dodane, żeby wyniki były takie same jak w wersji sekwencyjnej
+def get_local_indices(total_size, size, rank):
+    base = total_size // size
+    rem = total_size % size
+
+    counts = [base + 1 if i < rem else base for i in range(size)]
+    starts = [sum(counts[:i]) for i in range(size)]
+
+    return starts[rank], starts[rank] + counts[rank]
+
 
 def inicjalizuj_roj(objective, n_dim, bounds, swarm_size, comm, random_state=None):
-
     rank = comm.Get_rank()
     size = comm.Get_size()
     low, high = bounds
-
 
     if random_state is not None:
         np.random.seed(random_state)
 
     all_positions = np.random.uniform(low=low, high=high, size=(swarm_size, n_dim))
 
-
-    base_count = swarm_size // size
-    remainder = swarm_size % size
-
-
-    counts = [base_count + 1 if i < remainder else base_count for i in range(size)]
-
-
-    starts = [sum(counts[:i]) for i in range(size)]
-
-    my_start = starts[rank]
-    my_end = my_start + counts[rank]
-
+    my_start, my_end = get_local_indices(swarm_size, size, rank)
 
     positions = all_positions[my_start:my_end].copy()
-
-
-
     velocities = np.zeros_like(positions)
 
     pbest_positions = positions.copy()
-
-
     pbest_values = objective(positions)
-
 
     local_best_idx = np.argmin(pbest_values)
     local_best_pos = pbest_positions[local_best_idx].copy()
@@ -67,13 +57,19 @@ def wykonaj_iteracje(
         w,
         c1,
         c2,
+        total_swarm_size,
+        my_indices
 ):
     low, high = bounds
+    _, n_dim = positions.shape
+    my_start, my_end = my_indices
 
-    local_swarm_size, n_dim = positions.shape
+    # Generujemy losowe liczby dla całego roju, a nasz podzbiór bierzemy dla danego procesu, aby wyniki były takie same jak w wersji sekwencyjnej
+    r1_all = np.random.rand(total_swarm_size, n_dim)
+    r2_all = np.random.rand(total_swarm_size, n_dim)
 
-    r1 = np.random.rand(local_swarm_size, n_dim)
-    r2 = np.random.rand(local_swarm_size, n_dim)
+    r1 = r1_all[my_start:my_end]
+    r2 = r2_all[my_start:my_end]
 
     cognitive = c1 * r1 * (pbest_positions - positions)
     social = c2 * r2 * (gbest_position - positions)
@@ -94,7 +90,6 @@ def wykonaj_iteracje(
     current_local_best_pos = pbest_positions[current_local_best_idx]
 
     all_bests = comm.allgather((current_local_best_val, current_local_best_pos))
-
     best_val_global, best_pos_global = min(all_bests, key=lambda x: x[0])
 
     return (
@@ -124,6 +119,10 @@ def uruchom_pso(
         eps_no_improve=1e-6,
         random_state=None,
 ):
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    my_indices = get_local_indices(swarm_size, size, rank)
 
     positions_list = []
 
@@ -136,14 +135,12 @@ def uruchom_pso(
         local_best_val
     ) = inicjalizuj_roj(objective, n_dim, bounds, swarm_size, comm, random_state)
 
-    # Szukamy globalnego lidera na start
     all_init_bests = comm.allgather((local_best_val, local_best_pos))
     gbest_value, gbest_position = min(all_init_bests, key=lambda x: x[0])
 
     best_history = [gbest_value]
 
     for it in range(max_iters):
-        # Do wizualizacji można zbierać pozycje (opcjonalne, bo zajmuje pamięć)
         positions_list.append(positions)
 
         (
@@ -165,6 +162,8 @@ def uruchom_pso(
             w,
             c1,
             c2,
+            swarm_size,
+            my_indices
         )
 
         if current_gbest_value < gbest_value:
