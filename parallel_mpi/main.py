@@ -2,19 +2,44 @@ import numpy as np
 from mpi4py import MPI
 from benchmarks.stop_conditions import stop_brak_poprawy, stop_znane_optimum
 
-def inicjalizuj_roj(objective, n_dim, bounds, local_swarm_size, rank, random_state=None):
+
+def inicjalizuj_roj(objective, n_dim, bounds, swarm_size, comm, random_state=None):
+
+    rank = comm.Get_rank()
+    size = comm.Get_size()
     low, high = bounds
 
-    #To jest po to żeby różne instancje miały różne pozycje początkowe gdy random_state jest ustawiony
+
     if random_state is not None:
-        np.random.seed(random_state + rank)
+        np.random.seed(random_state)
+
+    all_positions = np.random.uniform(low=low, high=high, size=(swarm_size, n_dim))
 
 
-    positions = np.random.uniform(low=low, high=high, size=(local_swarm_size, n_dim))
+    base_count = swarm_size // size
+    remainder = swarm_size % size
+
+
+    counts = [base_count + 1 if i < remainder else base_count for i in range(size)]
+
+
+    starts = [sum(counts[:i]) for i in range(size)]
+
+    my_start = starts[rank]
+    my_end = my_start + counts[rank]
+
+
+    positions = all_positions[my_start:my_end].copy()
+
+
+
     velocities = np.zeros_like(positions)
 
     pbest_positions = positions.copy()
+
+
     pbest_values = objective(positions)
+
 
     local_best_idx = np.argmin(pbest_values)
     local_best_pos = pbest_positions[local_best_idx].copy()
@@ -44,10 +69,11 @@ def wykonaj_iteracje(
         c2,
 ):
     low, high = bounds
-    swarm_size, n_dim = positions.shape
 
-    r1 = np.random.rand(swarm_size, n_dim)
-    r2 = np.random.rand(swarm_size, n_dim)
+    local_swarm_size, n_dim = positions.shape
+
+    r1 = np.random.rand(local_swarm_size, n_dim)
+    r2 = np.random.rand(local_swarm_size, n_dim)
 
     cognitive = c1 * r1 * (pbest_positions - positions)
     social = c2 * r2 * (gbest_position - positions)
@@ -67,7 +93,6 @@ def wykonaj_iteracje(
     current_local_best_val = pbest_values[current_local_best_idx]
     current_local_best_pos = pbest_positions[current_local_best_idx]
 
-    # Zbieranie najlepszych wyników z wszystkich instancji
     all_bests = comm.allgather((current_local_best_val, current_local_best_pos))
 
     best_val_global, best_pos_global = min(all_bests, key=lambda x: x[0])
@@ -99,12 +124,6 @@ def uruchom_pso(
         eps_no_improve=1e-6,
         random_state=None,
 ):
-    rank = comm.Get_rank()
-    size = comm.Get_size()
-
-    base_count = swarm_size // size
-    remainder = swarm_size % size
-    local_swarm_size = base_count + 1 if rank < remainder else base_count
 
     positions_list = []
 
@@ -115,14 +134,16 @@ def uruchom_pso(
         pbest_values,
         local_best_pos,
         local_best_val
-    ) = inicjalizuj_roj(objective, n_dim, bounds, local_swarm_size, rank, random_state)
+    ) = inicjalizuj_roj(objective, n_dim, bounds, swarm_size, comm, random_state)
 
+    # Szukamy globalnego lidera na start
     all_init_bests = comm.allgather((local_best_val, local_best_pos))
     gbest_value, gbest_position = min(all_init_bests, key=lambda x: x[0])
 
     best_history = [gbest_value]
 
     for it in range(max_iters):
+        # Do wizualizacji można zbierać pozycje (opcjonalne, bo zajmuje pamięć)
         positions_list.append(positions)
 
         (
