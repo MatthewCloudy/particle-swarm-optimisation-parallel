@@ -6,8 +6,7 @@ import time
 import pickle
 
 def eval_block(block, objective):
-    return [objective(x) for x in block]
-
+    return objective(block)
 
 def chunkify(arr, n_chunks):
     chunk_size = len(arr) // n_chunks
@@ -28,7 +27,8 @@ def inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state=None):
     velocities = np.zeros_like(positions)
 
     pbest_positions = positions.copy()
-    pbest_values = np.apply_along_axis(objective, 1, positions)
+    pbest_values = objective(positions)
+
 
     best_idx = np.argmin(pbest_values)
     gbest_position = pbest_positions[best_idx].copy()
@@ -168,8 +168,8 @@ def uruchom_pso(
                 break
 
     liczba_iteracji = len(best_history) - 1
-    metadata = {"Iteracje": liczba_iteracji, "Liczba punktów": swarm_size, 
+    metadata = {"Iteracje": liczba_iteracji, "Liczba punktów": swarm_size,
                 "Funkcja": objective.__name__, "Ograniczenia" : bounds}
-    
+
     return gbest_position, gbest_value, liczba_iteracji, metadata, positions_list
 

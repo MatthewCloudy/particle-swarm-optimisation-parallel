@@ -10,7 +10,7 @@ def eksperymenty():
         ("Rosenbrock", rosenbrock, (-10.0, 10.0))
     ]
 
-    ns = [2]
+    ns = [10]
 
     for nazwa, objective, bounds in funkcje:
         print(f"\n=== Zadanie: {nazwa} ===")

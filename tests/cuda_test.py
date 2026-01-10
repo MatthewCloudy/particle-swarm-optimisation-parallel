@@ -1,8 +1,7 @@
-import time
-import pickle
-import numpy as np
 from benchmarks.benchmark_functions import rosenbrock, schwefel
-from sequential.main import uruchom_pso
+import cupy as cp
+import time
+from parallel_cuda.main import uruchom_pso
 
 def eksperymenty():
     funkcje = [
@@ -20,9 +19,9 @@ def eksperymenty():
 
             # ustalamy optimum znane
             if nazwa == "Schwefel":
-                x_opt = np.full(n, 420.9687)
+                x_opt = cp.full(n, 420.9687)
             else:
-                x_opt = np.ones(n)
+                x_opt = cp.ones(n)
 
             # ---------------------------------------------
             # Kryterium 1 — znane optimum
@@ -45,11 +44,11 @@ def eksperymenty():
             print("[Kryterium 1] najlepsze f(x):", best_f)
             print("[Kryterium 1] czas:", end - start)
 
-            # file = open(f'output/sequential_{nazwa}_kryt_1_metadata.txt', 'wb')
+            # file = open(f'parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
             # file.close()
             #
-            # file = open(f'output/sequential_{nazwa}_kryt_1_points.txt', 'wb')
+            # file = open(f'parallel_{nazwa}_kryt_1_points.txt', 'wb')
             # for position in positions:
             #     np.save(file, position)
             # file.close()
@@ -75,13 +74,15 @@ def eksperymenty():
             print("[Kryterium 2] najlepsze f(x):", best_f2)
             print("[Kryterium 2] czas:", end - start)
 
-            # file = open(f'output/sequential_{nazwa}_kryt_2_metadata.txt', 'wb')
+            # file = open(f'parallel_{nazwa}_kryt_2_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
             # file.close()
             #
-            # file = open(f'output/sequential_{nazwa}_kryt_2_points.txt', 'wb')
+            # file = open(f'parallel_{nazwa}_kryt_2_points.txt', 'wb')
             # for position in positions:
             #     np.save(file, position)
             # file.close()
+
+
 if __name__ == "__main__":
     eksperymenty()

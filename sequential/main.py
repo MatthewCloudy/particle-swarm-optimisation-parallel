@@ -14,7 +14,7 @@ def inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state=None):
     velocities = np.zeros_like(positions)
 
     pbest_positions = positions.copy()
-    pbest_values = np.apply_along_axis(objective, 1, positions)
+    pbest_values = objective(positions)
 
     best_idx = np.argmin(pbest_values)
     gbest_position = pbest_positions[best_idx].copy()
@@ -62,7 +62,7 @@ def wykonaj_iteracje(
 
     positions = np.clip(positions, low, high)
 
-    values = np.apply_along_axis(objective, 1, positions)
+    values = objective(positions)
 
     improved = values < pbest_values
     pbest_values[improved] = values[improved]
