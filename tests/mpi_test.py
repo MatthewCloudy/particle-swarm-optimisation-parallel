@@ -65,7 +65,7 @@ def eksperymenty():
             print(f"[Kryterium 1] iteracje (średnia, odchylenie): {statistics.mean(iterations)}, {statistics.stdev(iterations)}")
             print(f"[Kryterium 1] najlepsze f(x) (średnia, odchylenie): {statistics.mean(best_values)}, {statistics.stdev(best_values)}")
             print(f"[Kryterium 1] czas (średnia, odchylenie): {statistics.mean(times)}, {statistics.stdev(times)}")
-            print(f"[Kryterium 1] czas (średnia, odchylenie): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}")
+            print(f"[Kryterium 1] czas / iteracje (średnia, odchylenie): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}")
             # file = open(f'parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
             # file.close()
