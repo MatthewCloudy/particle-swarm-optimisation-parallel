@@ -134,7 +134,6 @@ def uruchom_pso(
         if zapisuj_pozycje:
             positions_list.append(positions.copy())
 
-        positions_list.append(positions.copy())
 
         (positions, velocities,
          pbest_positions, pbest_values,
