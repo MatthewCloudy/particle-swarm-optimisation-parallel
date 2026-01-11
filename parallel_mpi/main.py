@@ -1,6 +1,7 @@
+from collections import deque
 import numpy as np
 from mpi4py import MPI
-from benchmarks.stop_conditions import stop_brak_poprawy, stop_znane_optimum
+from benchmarks.stop_conditions import stop_brak_poprawy_deque, stop_znane_optimum
 
 # Dzieli całkowitą liczbę elementów na podzbiory dla każdego procesu, jest to dodane, żeby wyniki były takie same jak w wersji sekwencyjnej
 def get_local_indices(total_size, size, rank):
@@ -71,13 +72,18 @@ def wykonaj_iteracje(
     r1 = r1_all[my_start:my_end]
     r2 = r2_all[my_start:my_end]
 
-    cognitive = c1 * r1 * (pbest_positions - positions)
-    social = c2 * r2 * (gbest_position - positions)
+    r1 *= c1
+    r1 *= (pbest_positions - positions)
 
-    velocities = w * velocities + cognitive + social
-    positions = positions + velocities
+    r2 *= c2
+    r2 *= (gbest_position - positions)
 
-    positions = np.clip(positions, low, high)
+    velocities *= w
+    velocities += r1
+    velocities += r2
+
+    positions += velocities
+    np.clip(positions, low, high, out=positions)
 
     values = objective(positions)
 
@@ -138,10 +144,14 @@ def uruchom_pso(
     all_init_bests = comm.allgather((local_best_val, local_best_pos))
     gbest_value, gbest_position = min(all_init_bests, key=lambda x: x[0])
 
-    best_history = [gbest_value]
+    convergence_window = deque(maxlen=m_no_improve + 1)
+    convergence_window.append(float(gbest_value))
+    iterations_done = 0
+    zapisuj_pozycje = (n_dim == 2)
 
     for it in range(max_iters):
-        positions_list.append(positions)
+        if zapisuj_pozycje:
+            positions_list.append(positions.copy())
 
         (
             positions,
@@ -169,16 +179,17 @@ def uruchom_pso(
         if current_gbest_value < gbest_value:
             gbest_value = current_gbest_value
 
-        best_history.append(gbest_value)
+        convergence_window.append(float(gbest_value))
+        iterations_done = it + 1
 
         if tryb_stopu == "known" and x_opt is not None:
             if stop_znane_optimum(gbest_position, x_opt, eps_opt):
                 break
         elif tryb_stopu == "no_improve":
-            if stop_brak_poprawy(best_history, m_no_improve, eps_no_improve):
+            if stop_brak_poprawy_deque(convergence_window, eps_no_improve):
                 break
 
-    liczba_iteracji = len(best_history) - 1
+    liczba_iteracji = iterations_done
     metadata = {"Iteracje": liczba_iteracji, "Liczba punktów": swarm_size,
                 "Funkcja": objective.__name__, "Ograniczenia": bounds}
 
