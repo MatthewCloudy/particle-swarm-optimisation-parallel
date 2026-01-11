@@ -1,12 +1,13 @@
+from collections import deque
+
 import numpy as np
 from benchmarks.benchmark_functions import rosenbrock, schwefel
-from benchmarks.stop_conditions import stop_brak_poprawy, stop_znane_optimum
+from benchmarks.stop_conditions import stop_brak_poprawy_deque, stop_znane_optimum
 import time
 import pickle
 
 def inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state=None):
     low, high = bounds
-
     if random_state is not None:
         np.random.seed(random_state)
 
@@ -15,22 +16,11 @@ def inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state=None):
 
     pbest_positions = positions.copy()
     pbest_values = objective(positions)
-
     best_idx = np.argmin(pbest_values)
     gbest_position = pbest_positions[best_idx].copy()
     gbest_value = pbest_values[best_idx]
 
-    best_history = [gbest_value]
-
-    return (
-        positions,
-        velocities,
-        pbest_positions,
-        pbest_values,
-        gbest_position,
-        gbest_value,
-        best_history,
-    )
+    return (positions, velocities, pbest_positions, pbest_values, gbest_position, gbest_value)
 
 
 def wykonaj_iteracje(
@@ -41,7 +31,6 @@ def wykonaj_iteracje(
     pbest_values,
     gbest_position,
     gbest_value,
-    best_history,
     bounds,
     w,
     c1,
@@ -54,36 +43,35 @@ def wykonaj_iteracje(
     r1 = np.random.rand(swarm_size, n_dim)
     r2 = np.random.rand(swarm_size, n_dim)
 
-    cognitive = c1 * r1 * (pbest_positions - positions)
-    social = c2 * r2 * (gbest_position - positions)
+    r1 *= c1
+    r1 *= (pbest_positions - positions)
 
-    velocities = w * velocities + cognitive + social
-    positions = positions + velocities
+    r2 *= c2
+    r2 *= (gbest_position - positions)
 
-    positions = np.clip(positions, low, high)
+    velocities *= w
+    velocities += r1
+    velocities += r2
+
+    positions += velocities
+    np.clip(positions, low, high, out=positions)
 
     values = objective(positions)
 
-    improved = values < pbest_values
-    pbest_values[improved] = values[improved]
-    pbest_positions[improved] = positions[improved]
+    improved_mask = values < pbest_values
+    pbest_values[improved_mask] = values[improved_mask]
+    pbest_positions[improved_mask] = positions[improved_mask]
 
-    best_idx = np.argmin(pbest_values)
-    if pbest_values[best_idx] < gbest_value:
-        gbest_value = pbest_values[best_idx]
-        gbest_position = pbest_positions[best_idx].copy()
+    current_best_idx = np.argmin(pbest_values)
+    current_best_val = pbest_values[current_best_idx]
 
-    best_history.append(gbest_value)
+    if current_best_val < gbest_value:
+        gbest_value = current_best_val
+        gbest_position[:] = pbest_positions[current_best_idx]
 
-    return (
-        positions,
-        velocities,
-        pbest_positions,
-        pbest_values,
-        gbest_position,
-        gbest_value,
-        best_history,
-    )
+    return (positions, velocities,
+            pbest_positions, pbest_values,
+            gbest_position, gbest_value)
 
 
 def uruchom_pso(
@@ -109,46 +97,39 @@ def uruchom_pso(
         pbest_positions,
         pbest_values,
         gbest_position,
-        gbest_value,
-        best_history,
-    ) = inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state)
+        gbest_value) = inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state)
 
+    convergence_window = deque(maxlen=m_no_improve + 1)
+    convergence_window.append(float(gbest_value))
+    iterations_done = 0
+    zapisuj_pozycje = (n_dim == 2)
     for it in range(max_iters):
-        positions_list.append(positions)
-        (
-            positions,
-            velocities,
-            pbest_positions,
-            pbest_values,
-            gbest_position,
-            gbest_value,
-            best_history,
-        ) = wykonaj_iteracje(
-            objective,
-            positions,
-            velocities,
-            pbest_positions,
-            pbest_values,
-            gbest_position,
-            gbest_value,
-            best_history,
-            bounds,
-            w,
-            c1,
-            c2,
-        )
+        if zapisuj_pozycje:
+            positions_list.append(positions.copy())
 
+        (positions, velocities,
+         pbest_positions, pbest_values,
+         gbest_position, gbest_value) = wykonaj_iteracje(
+            objective,
+            positions, velocities,
+            pbest_positions, pbest_values,
+            gbest_position, gbest_value,
+            bounds, w, c1, c2
+        )
+        convergence_window.append(float(gbest_value))
+        iterations_done = it +1
         if tryb_stopu == "known" and x_opt is not None:
             if stop_znane_optimum(gbest_position, x_opt, eps_opt):
                 break
+
         elif tryb_stopu == "no_improve":
-            if stop_brak_poprawy(best_history, m_no_improve, eps_no_improve):
+            if stop_brak_poprawy_deque(convergence_window, eps_no_improve):
                 break
 
-    liczba_iteracji = len(best_history) - 1
-    metadata = {"Iteracje": liczba_iteracji, "Liczba punktów": swarm_size, 
+    liczba_iteracji = iterations_done
+    metadata = {"Iteracje": liczba_iteracji, "Liczba punktów": swarm_size,
                 "Funkcja": objective.__name__, "Ograniczenia" : bounds}
-    
+
     return gbest_position, gbest_value, liczba_iteracji, metadata, positions_list
 
 

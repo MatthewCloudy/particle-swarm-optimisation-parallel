@@ -1,3 +1,6 @@
+
+
+
 import numpy as np
 
 
@@ -8,12 +11,12 @@ def stop_znane_optimum(gbest_position, x_opt, eps_opt):
     return norm <= eps_opt
 
 
-def stop_brak_poprawy(best_history, m_no_improve, eps_no_improve):
+def stop_brak_poprawy_deque(history_deque, eps_no_improve):
 
-    m = m_no_improve
-    if len(best_history) <= m:
+    if len(history_deque) < history_deque.maxlen:
         return False
 
-    f_old = best_history[-m - 1]
-    f_new = best_history[-1]
-    return abs(f_old - f_new) <= eps_no_improve
+    val_old = history_deque[0]
+    val_new = history_deque[-1]
+
+    return abs(val_old - val_new) <= eps_no_improve
