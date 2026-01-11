@@ -19,18 +19,17 @@ def eksperymenty():
 
         for n in ns:
             print(f"\nWymiar n = {n}")
+            # ustalamy optimum znane
+            if nazwa == "Schwefel":
+                x_opt = cp.full(n, 420.9687)
+            else:
+                x_opt = cp.ones(n)
+
             best_values = []
             iterations = []
             times = []
             times_div_iterations = []
             for iteration in range(ITERATIONS):
-
-                # ustalamy optimum znane
-                if nazwa == "Schwefel":
-                    x_opt = cp.full(n, 420.9687)
-                else:
-                    x_opt = cp.ones(n)
-
                 # ---------------------------------------------
                 # Kryterium 1 — znane optimum
                 # ---------------------------------------------
@@ -54,10 +53,10 @@ def eksperymenty():
                 times.append(time_passed)
                 times_div_iterations.append(time_passed / iters)
 
-            print(f"[Kryterium 1] iteracje (średnia, odchylenie): {statistics.mean(iterations)}, {statistics.stdev(iterations)}")
-            print(f"[Kryterium 1] najlepsze f(x) (średnia, odchylenie): {statistics.mean(best_values)}, {statistics.stdev(best_values)}")
-            print(f"[Kryterium 1] czas (średnia, odchylenie): {statistics.mean(times)}, {statistics.stdev(times)}")
-            print(f"[Kryterium 1] czas / iteracje (średnia, odchylenie): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}")
+            print(f"[Kryterium 1] iteracje (średnia, odchylenie, min, max): {statistics.mean(iterations)}, {statistics.stdev(iterations)}, {min(iterations)}, {max(iterations)}")
+            print(f"[Kryterium 1] najlepsze f(x) (średnia, odchylenie, min, max): {statistics.mean(best_values)}, {statistics.stdev(best_values)}, {min(best_values)}, {max(best_values)}")
+            print(f"[Kryterium 1] czas (średnia, odchylenie, min, max): {statistics.mean(times)}, {statistics.stdev(times)}, {min(times)}, {max(times)}")
+            print(f"[Kryterium 1] czas / iteracje (średnia, odchylenie, min, max): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}, {min(times_div_iterations)}, {max(times_div_iterations)}")
             # file = open(f'parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
             # file.close()
@@ -70,6 +69,10 @@ def eksperymenty():
             # ---------------------------------------------
             # Kryterium 2 — brak poprawy
             # ---------------------------------------------
+            best_values = []
+            iterations = []
+            times = []
+            times_div_iterations = []
             for iteration in range(ITERATIONS):
                 start = time.time()
                 best_x2, best_f2, iters2, metadata, positions = uruchom_pso(
@@ -91,10 +94,10 @@ def eksperymenty():
                 times.append(time_passed)
                 times_div_iterations.append(time_passed / iters)
 
-            print(f"[Kryterium 2] iteracje (średnia, odchylenie): {statistics.mean(iterations)}, {statistics.stdev(iterations)}")
-            print(f"[Kryterium 2] najlepsze f(x) (średnia, odchylenie): {statistics.mean(best_values)}, {statistics.stdev(best_values)}")
-            print(f"[Kryterium 2] czas (średnia, odchylenie): {statistics.mean(times)}, {statistics.stdev(times)}")
-            print(f"[Kryterium 2] czas / iteracje (średnia, odchylenie): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}")
+            print(f"[Kryterium 2] iteracje (średnia, odchylenie, min, max): {statistics.mean(iterations)}, {statistics.stdev(iterations)}, {min(iterations)}, {max(iterations)}")
+            print(f"[Kryterium 2] najlepsze f(x) (średnia, odchylenie, min, max): {statistics.mean(best_values)}, {statistics.stdev(best_values)}, {min(best_values)}, {max(best_values)}")
+            print(f"[Kryterium 2] czas (średnia, odchylenie, min, max): {statistics.mean(times)}, {statistics.stdev(times)}, {min(times)}, {max(times)}")
+            print(f"[Kryterium 2] czas / iteracje (średnia, odchylenie, min, max): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}, {min(times_div_iterations)}, {max(times_div_iterations)}")
 
             # file = open(f'parallel_{nazwa}_kryt_2_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
