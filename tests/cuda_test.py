@@ -2,6 +2,12 @@ from benchmarks.benchmark_functions import rosenbrock, schwefel
 import cupy as cp
 import time
 from parallel_cuda.main import uruchom_pso
+import pickle
+import numpy as np
+import os
+
+if not os.path.exists("./data"):
+    os.makedirs("./data")
 
 def eksperymenty():
     funkcje = [
@@ -44,14 +50,14 @@ def eksperymenty():
             print("[Kryterium 1] najlepsze f(x):", best_f)
             print("[Kryterium 1] czas:", end - start)
 
-            # file = open(f'parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
-            # pickle.dump(metadata, file)
-            # file.close()
-            #
-            # file = open(f'parallel_{nazwa}_kryt_1_points.txt', 'wb')
-            # for position in positions:
-            #     np.save(file, position)
-            # file.close()
+            file = open(f'./data/parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
+            pickle.dump(metadata, file)
+            file.close()
+            
+            file = open(f'./data/parallel_{nazwa}_kryt_1_points.txt', 'wb')
+            for position in positions:
+                np.save(file, position)
+            file.close()
 
             # ---------------------------------------------
             # Kryterium 2 — brak poprawy
@@ -74,14 +80,15 @@ def eksperymenty():
             print("[Kryterium 2] najlepsze f(x):", best_f2)
             print("[Kryterium 2] czas:", end - start)
 
-            # file = open(f'parallel_{nazwa}_kryt_2_metadata.txt', 'wb')
-            # pickle.dump(metadata, file)
-            # file.close()
-            #
-            # file = open(f'parallel_{nazwa}_kryt_2_points.txt', 'wb')
-            # for position in positions:
-            #     np.save(file, position)
-            # file.close()
+            file = open(f'./data/parallel_{nazwa}_kryt_2_metadata.txt', 'wb')
+            print(metadata)
+            pickle.dump(metadata, file)
+            file.close()
+            
+            file = open(f'./data/parallel_{nazwa}_kryt_2_points.txt', 'wb')
+            for position in positions:
+                np.save(file, position)
+            file.close()
 
 
 if __name__ == "__main__":
