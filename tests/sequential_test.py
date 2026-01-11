@@ -5,6 +5,10 @@ from benchmarks.benchmark_functions import rosenbrock, schwefel
 from sequential.main import uruchom_pso
 import statistics
 
+# import os
+# if not os.path.exists("./data"):
+#     os.makedirs("./data")
+
 ITERATIONS = 10
 
 def eksperymenty():
@@ -59,11 +63,11 @@ def eksperymenty():
             print(f"[Kryterium 1] najlepsze f(x) (średnia, odchylenie): {statistics.mean(best_values)}, {statistics.stdev(best_values)}")
             print(f"[Kryterium 1] czas (średnia, odchylenie): {statistics.mean(times)}, {statistics.stdev(times)}")
             print(f"[Kryterium 1] czas (średnia, odchylenie): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}")
-            # file = open(f'parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
+            # file = open(f'./data/sequential_{nazwa}_kryt_1_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
             # file.close()
             #
-            # file = open(f'parallel_{nazwa}_kryt_1_points.txt', 'wb')
+            # file = open(f'./data/sequential_{nazwa}_kryt_1_points.txt', 'wb')
             # for position in positions:
             #     np.save(file, position)
             # file.close()
@@ -97,11 +101,11 @@ def eksperymenty():
             print(f"[Kryterium 2] czas (średnia, odchylenie): {statistics.mean(times)}, {statistics.stdev(times)}")
             print(f"[Kryterium 2] czas / iteracje (średnia, odchylenie): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}")
 
-            # file = open(f'parallel_{nazwa}_kryt_2_metadata.txt', 'wb')
+            # file = open(f'./data/sequential_{nazwa}_kryt_2_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
             # file.close()
             #
-            # file = open(f'parallel_{nazwa}_kryt_2_points.txt', 'wb')
+            # file = open(f'./data/sequential_{nazwa}_kryt_2_points.txt', 'wb')
             # for position in positions:
             #     np.save(file, position)
             # file.close()
