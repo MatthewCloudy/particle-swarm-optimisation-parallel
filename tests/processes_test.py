@@ -4,54 +4,69 @@ import time
 import pickle
 import numpy as np
 from parallel_processes.main import uruchom_pso
+import statistics
+
+ITERATIONS = 10
+
 def eksperymenty():
     funkcje = [
         ("Schwefel", schwefel, (-100.0, 500.0)),
         ("Rosenbrock", rosenbrock, (-10.0, 10.0))
     ]
 
-    ns = [10]
+    ns = [2]
 
     for nazwa, objective, bounds in funkcje:
         print(f"\n=== Zadanie: {nazwa} ===")
 
         for n in ns:
             print(f"\nWymiar n = {n}")
+            best_values = []
+            iterations = []
+            times = []
+            times_div_iterations = []
+            for iteration in range(ITERATIONS):
 
-            # ustalamy optimum znane
-            if nazwa == "Schwefel":
-                x_opt = np.full(n, 420.9687)
-            else:
-                x_opt = np.ones(n)
+                # ustalamy optimum znane
+                if nazwa == "Schwefel":
+                    x_opt = np.full(n, 420.9687)
+                else:
+                    x_opt = np.ones(n)
 
-            # ---------------------------------------------
-            # Kryterium 1 — znane optimum
-            # ---------------------------------------------
-            with Pool(processes=cpu_count()) as pool:
-                start = time.time()
-                best_x, best_f, iters, metadata, positions = uruchom_pso(
-                    objective=objective,
-                    n_dim=n,
-                    bounds=bounds,
-                    pool=pool,
-                    swarm_size=1000,
-                    max_iters=10000,
-                    tryb_stopu="known",
-                    x_opt=x_opt,
-                    eps_opt=1e-3,
-                    random_state=0
-                )
-                end = time.time()
+                # ---------------------------------------------
+                # Kryterium 1 — znane optimum
+                # ---------------------------------------------
+                with Pool(processes=cpu_count()) as pool:
+                    start = time.time()
+                    best_x, best_f, iters, metadata, positions = uruchom_pso(
+                        objective=objective,
+                        n_dim=n,
+                        bounds=bounds,
+                        pool=pool,
+                        swarm_size=1000,
+                        max_iters=10000,
+                        tryb_stopu="known",
+                        x_opt=x_opt,
+                        eps_opt=1e-3,
+                        random_state=0
+                    )
+                    end = time.time()
+                
+                time_passed = end - start
+                iterations.append(iters)
+                best_values.append(best_f.item())
+                times.append(time_passed)
+                times_div_iterations.append(time_passed / iters)
 
-            print("[Kryterium 1] iteracje:", iters)
-            print("[Kryterium 1] najlepsze f(x):", best_f)
-            print("[Kryterium 1] czas:", end - start)
-
-            # file = open(f'output/parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
+            print(f"[Kryterium 1] iteracje (średnia, odchylenie): {statistics.mean(iterations)}, {statistics.stdev(iterations)}")
+            print(f"[Kryterium 1] najlepsze f(x) (średnia, odchylenie): {statistics.mean(best_values)}, {statistics.stdev(best_values)}")
+            print(f"[Kryterium 1] czas (średnia, odchylenie): {statistics.mean(times)}, {statistics.stdev(times)}")
+            print(f"[Kryterium 1] czas (średnia, odchylenie): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}")
+            # file = open(f'parallel_{nazwa}_kryt_1_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
             # file.close()
             #
-            # file = open(f'output/parallel_{nazwa}_kryt_1_points.txt', 'wb')
+            # file = open(f'parallel_{nazwa}_kryt_1_points.txt', 'wb')
             # for position in positions:
             #     np.save(file, position)
             # file.close()
@@ -75,15 +90,22 @@ def eksperymenty():
                 )
                 end = time.time()
 
-            print("[Kryterium 2] iteracje:", iters2)
-            print("[Kryterium 2] najlepsze f(x):", best_f2)
-            print("[Kryterium 2] czas:", end - start)
+                time_passed = end - start
+                iterations.append(iters)
+                best_values.append(best_f.item())
+                times.append(time_passed)
+                times_div_iterations.append(time_passed / iters)
 
-            # file = open(f'output/parallel_{nazwa}_kryt_2_metadata.txt', 'wb')
+            print(f"[Kryterium 2] iteracje (średnia, odchylenie): {statistics.mean(iterations)}, {statistics.stdev(iterations)}")
+            print(f"[Kryterium 2] najlepsze f(x) (średnia, odchylenie): {statistics.mean(best_values)}, {statistics.stdev(best_values)}")
+            print(f"[Kryterium 2] czas (średnia, odchylenie): {statistics.mean(times)}, {statistics.stdev(times)}")
+            print(f"[Kryterium 2] czas / iteracje (średnia, odchylenie): {statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}")
+
+            # file = open(f'parallel_{nazwa}_kryt_2_metadata.txt', 'wb')
             # pickle.dump(metadata, file)
             # file.close()
             #
-            # file = open(f'output/parallel_{nazwa}_kryt_2_points.txt', 'wb')
+            # file = open(f'parallel_{nazwa}_kryt_2_points.txt', 'wb')
             # for position in positions:
             #     np.save(file, position)
             # file.close()
