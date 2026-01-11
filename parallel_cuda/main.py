@@ -5,14 +5,7 @@ import cupy as cp
 
 from cupyx.profiler import benchmark
 
-def my_func(a):
 
-    return cp.sqrt(cp.sum(a**2, axis=-1))
-
-
-a = cp.random.random((256, 1024))
-
-print(benchmark(my_func, (a,), n_repeat=20))
 
 def stop_znane_optimum(gbest_position, x_opt, eps_opt):
 
@@ -45,26 +38,6 @@ calculate_velocities = cp.ElementwiseKernel(
 
 def calculate_velocities2(velocity,position,best_local,best_global,w,c1,c2,r1,r2):
     return velocity + position
-
-NUM = 1000
-DIM = 10000
-velocity = cp.random.random((NUM, DIM), dtype=np.float64)
-position = cp.random.random((NUM, DIM), dtype=np.float64)
-best_local = cp.random.random((NUM, DIM), dtype=np.float64)
-best_global = cp.random.random((1, DIM), dtype=np.float64)
-w = cp.array([0.5], dtype=np.float64)
-c1 = cp.array([0.25], dtype=np.float64)
-c2 = cp.array([0.75], dtype=np.float64)
-r1 = cp.random.random((NUM, DIM), dtype=np.float64)
-r2 = cp.random.random((NUM, DIM), dtype=np.float64)
-
-
-
-print(benchmark(calculate_velocities, (velocity,position,best_local,best_global,w,c1,c2,r1,r2), n_repeat=20))
-
-# new_velocity = calculate_velocities(velocity, positions, best_local, best_global, w, c1, c2, r1, r2)
-# print(new_velocity)
-
 
 def inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state=None):
     low, high = bounds
@@ -118,32 +91,25 @@ def wykonaj_iteracje(
 
     velocities = calculate_velocities(velocities, positions, pbest_positions, gbest_position, w, c1, c2, r1, r2)
 
-    positions = positions + velocities
-
-    positions = cp.clip(positions, low, high)
+    positions += velocities
+    np.clip(positions, low, high, out=positions)
 
     values = objective(positions)
 
-    improved = values < pbest_values
-    pbest_values[improved] = values[improved]
-    pbest_positions[improved] = positions[improved]
+    improved_mask = values < pbest_values
+    pbest_values[improved_mask] = values[improved_mask]
+    pbest_positions[improved_mask] = positions[improved_mask]
 
-    best_idx = cp.argmin(pbest_values)
-    if pbest_values[best_idx] < gbest_value:
-        gbest_value = pbest_values[best_idx]
-        gbest_position = pbest_positions[best_idx].copy()
+    current_best_idx = np.argmin(pbest_values)
+    current_best_val = pbest_values[current_best_idx]
 
-    best_history.append(gbest_value)
+    if current_best_val < gbest_value:
+        gbest_value = current_best_val
+        gbest_position[:] = pbest_positions[current_best_idx]
 
-    return (
-        positions,
-        velocities,
-        pbest_positions,
-        pbest_values,
-        gbest_position,
-        gbest_value,
-        best_history,
-    )
+    return (positions, velocities,
+            pbest_positions, pbest_values,
+            gbest_position, gbest_value)
 
 
 def uruchom_pso(
@@ -181,8 +147,7 @@ def uruchom_pso(
             pbest_positions,
             pbest_values,
             gbest_position,
-            gbest_value,
-            best_history,
+            gbest_value
         ) = wykonaj_iteracje(
             objective,
             positions,
@@ -211,3 +176,28 @@ def uruchom_pso(
     
     return cp.asnumpy(gbest_position), cp.asnumpy(gbest_value), liczba_iteracji, metadata, positions_list
 
+if __name__ == "__main__":
+    def my_func(a):
+
+        return cp.sqrt(cp.sum(a**2, axis=-1))
+
+
+    a = cp.random.random((256, 1024))
+
+    print(benchmark(my_func, (a,), n_repeat=20))
+
+    NUM = 1000
+    DIM = 10000
+    velocity = cp.random.random((NUM, DIM), dtype=np.float64)
+    position = cp.random.random((NUM, DIM), dtype=np.float64)
+    best_local = cp.random.random((NUM, DIM), dtype=np.float64)
+    best_global = cp.random.random((1, DIM), dtype=np.float64)
+    w = cp.array([0.5], dtype=np.float64)
+    c1 = cp.array([0.25], dtype=np.float64)
+    c2 = cp.array([0.75], dtype=np.float64)
+    r1 = cp.random.random((NUM, DIM), dtype=np.float64)
+    r2 = cp.random.random((NUM, DIM), dtype=np.float64)
+
+
+
+    print(benchmark(calculate_velocities, (velocity,position,best_local,best_global,w,c1,c2,r1,r2), n_repeat=20))
