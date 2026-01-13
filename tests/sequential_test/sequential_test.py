@@ -9,7 +9,7 @@ import statistics
 # if not os.path.exists("./data"):
 #     os.makedirs("./data")
 
-ITERATIONS = 10
+ITERATIONS = 5
 
 
 def eksperymenty():
@@ -18,7 +18,7 @@ def eksperymenty():
         ("Rosenbrock", rosenbrock, (-10.0, 10.0))
     ]
 
-    ns = [2]
+    ns = [10, 50, 100]
 
     for nazwa, objective, bounds in funkcje:
         print(f"\n=== Zadanie: {nazwa} ===")
@@ -26,9 +26,6 @@ def eksperymenty():
         for n in ns:
             print(f"\nWymiar n = {n}")
 
-            # ---------------------------------------------
-            # Kryterium 1 — znane optimum
-            # ---------------------------------------------
             best_values = []
             iterations = []
             times = []
@@ -59,7 +56,7 @@ def eksperymenty():
                 iterations.append(iters)
                 best_values.append(best_f.item())
                 times.append(time_passed)
-                # Zabezpieczenie przed dzieleniem przez zero (choć iters powinno byc > 0)
+
                 times_div_iterations.append(time_passed / iters if iters > 0 else 0)
 
             print(
@@ -75,9 +72,6 @@ def eksperymenty():
             # pickle.dump(metadata, file)
             # file.close()
 
-            # ---------------------------------------------
-            # Kryterium 2 — brak poprawy
-            # ---------------------------------------------
             best_values = []
             iterations = []
             times = []
@@ -100,7 +94,6 @@ def eksperymenty():
 
                 time_passed = end - start
 
-                # POPRAWKA: Używamy zmiennych z sufiksem '2' (wynikowych dla tego kryterium)
                 iterations.append(iters2)
                 best_values.append(best_f2.item())
                 times.append(time_passed)

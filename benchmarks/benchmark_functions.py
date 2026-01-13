@@ -1,7 +1,5 @@
 import numpy as np
 
-
-
 def schwefel(x):
     if x.ndim == 1:
         x = x[np.newaxis, :]

@@ -1,12 +1,9 @@
-# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
 *.so
 
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -26,21 +23,17 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual environment
 venv/
 ENV/
 env/
 .venv/
 
-# PyInstaller
 *.manifest
 *.spec
 
-# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -53,41 +46,29 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Jupyter Notebook
 .ipynb_checkpoints
 
-# pyenv
 .python-version
 
-# pipenv
 Pipfile.lock
 
-# poetry
 poetry.lock
 
-# Pydantic cache
 .pydantic/
 
-# mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
 .pyre/
 
-# pytype
 .pytype/
 
-# Cython debug symbols
 cython_debug/
 
-# VS Code
 .vscode/
 
-# IDEs
 .idea/
 
-# Output files
 *.txt
 *.gif

@@ -12,29 +12,25 @@ def sprawdz_srodowisko():
     print("     DIAGNOSTYKA ŚRODOWISKA PYTHONA (GIL & THREADS)")
     print("=" * 50)
 
-    # 1. Wersja Pythona
     print(f"Wersja Pythona: {sys.version.split()[0]}")
 
-    # 2. Sprawdzenie flagi kompilacji (sysconfig)
     gil_config = sysconfig.get_config_var('Py_GIL_DISABLED')
     print(f"Build Configuration (Py_GIL_DISABLED): {gil_config} (1 = Free-threaded build)")
 
-    # 3. Sprawdzenie runtime (tylko dla Python 3.13+)
     gil_status = "Nieznany (Stary Python)"
     try:
         if hasattr(sys, '_is_gil_enabled'):
             if not sys._is_gil_enabled():
-                gil_status = "🚀 WYŁĄCZONY (Free-Threading AKTYWNY!)"
+                gil_status = "WYŁĄCZONY (Free-Threading AKTYWNY)"
             else:
-                gil_status = "🐢 WŁĄCZONY (Standardowy tryb)"
+                gil_status = "WŁĄCZONY (Standardowy tryb)"
         else:
-            gil_status = "🐢 WŁĄCZONY (Brak funkcji _is_gil_enabled)"
+            gil_status = "WŁĄCZONY (Brak funkcji _is_gil_enabled)"
     except Exception as e:
         gil_status = f"Błąd sprawdzania: {e}"
 
     print(f"Status GIL w tym momencie: {gil_status}")
 
-    # 4. Liczba dostępnych rdzeni
     cpu_count = os.cpu_count()
     print(f"Dostępne rdzenie logiczne CPU: {cpu_count}")
     print("=" * 50 + "\n")
@@ -102,10 +98,6 @@ def inicjalizuj_roj(objective, n_dim, bounds, swarm_size, random_state=None):
     )
 
 
-# ==========================================
-# 2. WORKER WĄTKU (zoptymalizowany pod RAM / alokacje)
-# ==========================================
-
 def pso_worker(
     t_id,
     range_start,
@@ -126,7 +118,6 @@ def pso_worker(
 ):
     low, high = bounds
 
-    # --- Slicing robimy tylko raz (views na pamięć wspólną) ---
     pos_slice = positions[range_start:range_end]
     vel_slice = velocities[range_start:range_end]
     pbest_pos_slice = pbest_positions[range_start:range_end]
@@ -134,14 +125,12 @@ def pso_worker(
 
     slice_size, n_dim = pos_slice.shape
 
-    # --- Bufory prealokowane, żeby nie robić nowych tablic co iterację ---
     r1 = np.empty_like(pos_slice)
     r2 = np.empty_like(pos_slice)
     tmp = np.empty_like(pos_slice)
 
     while True:
         try:
-            # Czekamy na sygnał startu iteracji
             barrier_start.wait(timeout=10.0)
         except threading.BrokenBarrierError:
             break
@@ -149,63 +138,41 @@ def pso_worker(
         if stop_event.is_set():
             break
 
-        # --- Losowe liczby (globalny RNG) do prealokowanych macierzy ---
         r1[:] = np.random.rand(slice_size, n_dim)
         r2[:] = np.random.rand(slice_size, n_dim)
 
-        # Aktualny globalny gbest (współdzielony)
         gbest_pos_curr = shared_gbest_container[0]
-
-        # ============================
-        # AKTUALIZACJA PRĘDKOŚCI
-        # ============================
 
         # vel = w * vel
         vel_slice *= w
 
-        # Część kognitywna: c1 * r1 * (pbest - pos)
         # tmp = (pbest - pos)
         np.subtract(pbest_pos_slice, pos_slice, out=tmp)
         tmp *= r1
         tmp *= c1
         vel_slice += tmp
 
-        # Część społeczna: c2 * r2 * (gbest - pos)
-        # tmp = (gbest - pos)  (broadcastowanie gbest na wszystkie wiersze)
+        # tmp = (gbest - pos)
         np.subtract(gbest_pos_curr, pos_slice, out=tmp)
         tmp *= r2
         tmp *= c2
         vel_slice += tmp
 
-        # ============================
-        # AKTUALIZACJA POZYCJI
-        # ============================
         pos_slice += vel_slice
         np.clip(pos_slice, low, high, out=pos_slice)
 
-        # ============================
-        # OCENA FUNKCJI CELU
-        # ============================
         curr_vals = objective(pos_slice)
 
-        # ============================
-        # AKTUALIZACJA LOKALNYCH PBEST
-        # ============================
         improved = curr_vals < pbest_val_slice
         if np.any(improved):
             pbest_val_slice[improved] = curr_vals[improved]
             pbest_pos_slice[improved] = pos_slice[improved]
 
-        # Zgłaszamy koniec pracy w tej iteracji
         try:
             barrier_end.wait(timeout=10.0)
         except threading.BrokenBarrierError:
             break
 
-
-# ==========================================
-# 3. GŁÓWNA FUNKCJA STERUJĄCA
-# ==========================================
 
 def uruchom_pso_threaded(
     objective,
@@ -246,7 +213,6 @@ def uruchom_pso_threaded(
     stop_event = threading.Event()
     threads = []
 
-    # Start wątków
     for t_id in range(n_threads):
         start_idx, end_idx = ranges[t_id]
         t = threading.Thread(
@@ -269,7 +235,7 @@ def uruchom_pso_threaded(
                 barrier_end,
                 stop_event,
             ),
-            daemon=True,  # nie blokuje programu przy nagłym wyjściu
+            daemon=True,
         )
         t.start()
         threads.append(t)
@@ -280,13 +246,10 @@ def uruchom_pso_threaded(
 
     try:
         for it in range(max_iters):
-            # 1. Start iteracji (zwolnienie workerów z bariery)
             barrier_start.wait()
 
-            # 2. Oczekiwanie na koniec obliczeń wątków
             barrier_end.wait()
 
-            # 3. Aktualizacja globalnego GBest – sekwencyjnie na bazie pbestów
             curr_best_idx = np.argmin(pbest_values)
             if pbest_values[curr_best_idx] < shared_gbest[1]:
                 shared_gbest[1] = pbest_values[curr_best_idx]
@@ -295,7 +258,6 @@ def uruchom_pso_threaded(
             iterations_done = it + 1
             convergence_window.append(float(shared_gbest[1]))
 
-            # Warunki stopu
             if tryb_stopu == "known" and x_opt is not None:
                 if stop_znane_optimum(shared_gbest[0], x_opt, eps_opt):
                     break
@@ -304,10 +266,8 @@ def uruchom_pso_threaded(
                     break
 
     except threading.BrokenBarrierError:
-        # może się zdarzyć przy resetowaniu / kończeniu
         pass
     finally:
-        # Sprzątanie
         stop_event.set()
         try:
             barrier_start.reset()
@@ -320,15 +280,11 @@ def uruchom_pso_threaded(
         for t in threads:
             t.join()
 
-    # Nie zwracamy listy pozycji (pusta lista) – oszczędność RAM
     return shared_gbest[0], shared_gbest[1], iterations_done, {}, []
 
 
-# ==========================================
-# 4. EKSPERYMENTY
-# ==========================================
 
-ITERATIONS = 10
+ITERATIONS = 5
 
 def eksperymenty():
     sprawdz_srodowisko()
@@ -337,7 +293,7 @@ def eksperymenty():
         ("Rosenbrock", rosenbrock, (-10.0, 10.0)),
     ]
 
-    ns = [2]  # możesz zmienić np. na [2, 10, 50] jak w sekwencyjnej
+    ns = [10, 50, 100]
 
     for nazwa, objective, bounds in funkcje:
         print(f"\n=== Zadanie: {nazwa} (wersja wielowątkowa) ===")
@@ -351,15 +307,12 @@ def eksperymenty():
 
             for iteration in range(ITERATIONS):
 
-                # ustalamy optimum znane
                 if nazwa == "Schwefel":
                     x_opt = np.full(n, 420.9687)
                 else:
                     x_opt = np.ones(n)
 
-                # ---------------------------------------------
-                # Kryterium 1 — znane optimum
-                # ---------------------------------------------
+
                 start = time.time()
                 best_x, best_f, iters, metadata, positions = uruchom_pso_threaded(
                     objective=objective,
@@ -370,10 +323,10 @@ def eksperymenty():
                     tryb_stopu="known",
                     x_opt=x_opt,
                     eps_opt=1e-3,
-                    m_no_improve=50,      # nieużywane przy "known", ale zostawiamy
-                    eps_no_improve=1e-6,  # nieużywane przy "known"
-                    random_state=0,  # możesz dać 0, jeśli chcesz zawsze ten sam bieg
-                    n_threads=None,       # None = auto (os.cpu_count)
+                    m_no_improve=50,
+                    eps_no_improve=1e-6,
+                    random_state=0,
+                    n_threads=None,
                 )
                 end = time.time()
 
@@ -396,17 +349,12 @@ def eksperymenty():
                   f"{statistics.mean(times_div_iterations)}, {statistics.stdev(times_div_iterations)}, "
                   f"{min(times_div_iterations)}, {max(times_div_iterations)}")
 
-            # ---------------------------------------------
-            # Kryterium 2 — brak poprawy
-            # ---------------------------------------------
             best_values = []
             iterations = []
             times = []
             times_div_iterations = []
 
             for iteration in range(ITERATIONS):
-                # optimum znane nie jest potrzebne dla "no_improve",
-                # ale możesz zostawić x_opt jak wyżej, nie przeszkadza.
                 start = time.time()
                 best_x2, best_f2, iters2, metadata2, positions2 = uruchom_pso_threaded(
                     objective=objective,
@@ -416,7 +364,7 @@ def eksperymenty():
                     max_iters=10000,
                     tryb_stopu="no_improve",
                     x_opt=None,
-                    eps_opt=1e-3,       # nieużywane przy "no_improve"
+                    eps_opt=1e-3,
                     m_no_improve=50,
                     eps_no_improve=1e-6,
                     random_state=0,
