@@ -3,7 +3,6 @@ import numpy as np
 from mpi4py import MPI
 from benchmarks.stop_conditions import stop_brak_poprawy_deque, stop_znane_optimum
 
-# Dzieli całkowitą liczbę elementów na podzbiory dla każdego procesu, jest to dodane, żeby wyniki były takie same jak w wersji sekwencyjnej
 def get_local_indices(total_size, size, rank):
     base = total_size // size
     rem = total_size % size
@@ -65,7 +64,6 @@ def wykonaj_iteracje(
     _, n_dim = positions.shape
     my_start, my_end = my_indices
 
-    # Generujemy losowe liczby dla całego roju, a nasz podzbiór bierzemy dla danego procesu, aby wyniki były takie same jak w wersji sekwencyjnej
     r1_all = np.random.rand(total_swarm_size, n_dim)
     r2_all = np.random.rand(total_swarm_size, n_dim)
 
